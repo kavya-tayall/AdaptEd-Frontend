@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Mic } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,6 +9,7 @@ import TopicChip from "@/components/topic-chip"
 
 export default function TopicSelection() {
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null)
+  const router = useRouter()
 
   const topics = [
     "Ohm's Law",
@@ -26,12 +28,22 @@ export default function TopicSelection() {
     setSelectedTopic(topic)
   }
 
+  const handleProceed = () => {
+    if (selectedTopic) {
+      router.push("/create-analogy")
+    } else {
+      alert("Please select a topic before proceeding.")
+    }
+  }
+
   return (
     <div className="max-w-3xl mx-auto pt-12">
       <h1 className="text-3xl font-bold text-center mb-16">Topic Selection</h1>
 
       <div className="mb-8">
-        <p className="text-center mb-6">What specific concept within Electrical Engineering do you want to master?</p>
+        <p className="text-center mb-6">
+          What specific concept within Electrical Engineering do you want to master?
+        </p>
 
         <div className="relative mb-8">
           <Input
@@ -56,7 +68,10 @@ export default function TopicSelection() {
       </div>
 
       <div className="flex justify-end">
-        <Button className="bg-gray-700 hover:bg-gray-800 text-white px-6">
+        <Button
+          className="bg-gray-700 hover:bg-gray-800 text-white px-6"
+          onClick={handleProceed}
+        >
           Proceed
           <span className="ml-2">→</span>
         </Button>
