@@ -30,7 +30,7 @@ export default function TopicSelection() {
 
   const handleProceed = () => {
     if (selectedTopic) {
-      router.push("/create-analogy")
+      router.push("/simple-explanation")
     } else {
       alert("Please select a topic before proceeding.")
     }

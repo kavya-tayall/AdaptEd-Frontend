@@ -49,7 +49,7 @@ export default function CreateAnalogyPage() {
 
         {/* Navigation Buttons */}
         <div className="flex justify-between">
-          <Button variant="outline">← Back</Button>
+          <Button variant="outline" onClick={() => window.history.back()}>← Back</Button>
           <Button
             className="bg-black text-white hover:bg-gray-900"
             disabled={isEvaluateDisabled}
