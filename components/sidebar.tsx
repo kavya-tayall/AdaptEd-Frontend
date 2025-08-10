@@ -1,11 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Paperclip, FileText } from "lucide-react";
+import { useState } from "react";
+import SidebarSteps from "./ui/sidebarsteps";
+import FileUploader from "./ui/file-uploader";
 
 export default function Sidebar() {
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [, setLastUploaded] = useState<{ name: string; content: string; type: string } | null>(null);
 
   const steps = [
     { number: 1, title: "Topic Selection", active: true },
@@ -16,86 +16,48 @@ export default function Sidebar() {
     { number: 6, title: "Review & Summary", active: false },
   ];
 
-  const handleFileUpload = (file: File) => {
-    setUploadedFile(file);
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const content = reader.result;
-      sessionStorage.setItem("uploadedFileName", file.name);
-      sessionStorage.setItem("uploadedFileContent", content as string);
-    };
-    reader.readAsText(file); // You can use readAsDataURL for binary files
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleFileUpload(file);
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    if (file) handleFileUpload(file);
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-  };
-
   return (
-    <div className="w-[410px] border-r border-gray-200 p-6 bg-white flex flex-col">
-      <h1 className="text-2xl font-bold mb-8">AdaptEd</h1>
+    <aside
+      aria-label="Sidebar"
+      className="w-[405px] shrink-0 bg-white border-r border-[var(--step-border)]"
+    >
+      {/* sticky so the rail behaves like the Figma frame */}
+      <div className="sticky top-0 h-dvh flex flex-col">
+        {/* ===== Header (405×69) with pt32 pr24 pb16 pl32 and bottom divider ===== */}
+        <header className="pl-8 pr-6 pt-8 pb-4 border-b border-[var(--step-border)]">
+          <h1 className="text-[24px]/[28px] font-bold tracking-[-0.01em]">AdaptEd</h1>
+        </header>
 
-      {/* Progress Steps */}
-      <div className="mb-8">
-        <h2 className="text-sm font-medium mb-4">Progress</h2>
-        <div className="space-y-3">
-          {steps.map((step) => (
-            <div
-              key={step.number}
-              className={`flex items-center gap-3 p-4 rounded-md border ${step.active ? "bg-gray-50" : "bg-white"}`}
-            >
-              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-white border border-gray-300 text-xs">
-                {step.number}
-              </div>
-              <span className="text-sm">{step.title}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* File Upload Section */}
-      <div>
-        <h2 className="text-sm font-medium mb-4">Supplemental Files</h2>
-
-        <div
-          onClick={() => fileInputRef.current?.click()}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          className="border border-dashed border-gray-300 rounded-md p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-50 transition"
-        >
-          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mb-2">
-            <Paperclip className="h-4 w-4 text-gray-500" />
-          </div>
-          <p className="text-sm text-gray-500">
-            Drag and drop your files to personalize your learning
+        {/* ===== Progress block ===== */}
+        <nav aria-label="Progress" className="pl-8 pr-6 pt-6 pb-6 border-b border-[var(--step-border)]">
+          <h2 className="text-[15px] font-semibold tracking-[0.18em] uppercase text-[var(--step-text)]">
+            Topic Progress
+          </h2>
+          <p className="mt-1 text-[15px] text-[var(--step-darkgrey)]">
+            Master the concept through these steps
           </p>
-          <input
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            onChange={handleFileChange}
-          />
-        </div>
 
-        {uploadedFile && (
-          <div className="mt-4 border border-gray-300 rounded-md p-3 flex items-center gap-2">
-            <FileText className="h-5 w-5 text-gray-600" />
-            <span className="text-sm text-gray-800 truncate">{uploadedFile.name}</span>
+          {/* Inner content must be exactly 349px (405 - 32 - 24) */}
+          <div className="mt-4 w-[349px]">
+            <SidebarSteps steps={steps} />
           </div>
-        )}
+        </nav>
+
+        {/* ===== Uploader block ===== */}
+        <section className="pl-8 pr-6 pt-6 pb-8">
+          <h3 className="text-[15px] font-semibold tracking-[0.18em] uppercase text-[var(--step-text)]">
+            Supplemental Files
+          </h3>
+          <p className="mt-1 text-[15px] text-[var(--step-darkgrey)]">
+            Personalize your AdaptEd journey
+          </p>
+
+          {/* Dropzone width must also be 349px to align with steps */}
+          <div className="mt-4 w-[349px]">
+            <FileUploader onLoaded={(f) => setLastUploaded(f)} />
+          </div>
+        </section>
       </div>
-    </div>
+    </aside>
   );
 }

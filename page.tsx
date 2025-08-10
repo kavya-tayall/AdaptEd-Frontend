@@ -1,12 +1,14 @@
-import Layout from "@/app/layout"
-import TopicSelection from "@/components/topic-selection-component"
-import Sidebar from "@/components/sidebar"
+// app/page.tsx
+import Sidebar from "@/components/sidebar";
+import TopicSelection from "@/components/topic-selection-component";
 
 export default function Home() {
   return (
-    <Layout>
-      <Sidebar></Sidebar>
-      <TopicSelection />
-    </Layout>
-  )
+    <div className="flex min-h-dvh">
+      <Sidebar />
+      <main className="flex-1">
+        <TopicSelection />
+      </main>
+    </div>
+  );
 }
