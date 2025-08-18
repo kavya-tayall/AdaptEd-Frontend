@@ -14,12 +14,23 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        outline: "border border-[var(--step-border)] bg-white hover:bg-[var(--step-superlight)] text-[var(--step-text)]",
-        ghost: "hover:bg-[var(--step-superlight)]",
+
+        // FIXED: dark-grey text by default; keep it on hover; only purple when selected.
+        outline:
+          "border border-[var(--step-border)] bg-white " +
+          "text-[var(--step-darkgrey)] " +
+          "hover:bg-white hover:text-[var(--step-darkgrey)] hover:border-[var(--step-selected-border)] " +
+          "[aria-pressed=true]:text-[var(--step-accent)] [aria-pressed=true]:border-[var(--step-selected-border)]",
+
+        // Also give ghost a stable text color so it doesn't inherit white
+        ghost: "text-[var(--step-darkgrey)] hover:bg-[var(--step-superlight)]",
+
         link: "text-[var(--step-accent)] underline-offset-4 hover:underline",
+
         // Figma CTA on Topic Selection
         proceed: "bg-[#4B5563] text-white hover:bg-[#374151]",
-        // Purple accent option if needed elsewhere
+
+        // Solid purple CTA
         accent: "bg-[var(--step-accent)] text-white hover:brightness-95",
       },
       size: {
@@ -27,7 +38,6 @@ const buttonVariants = cva(
         sm: "h-8 px-3 rounded-md gap-1.5",
         lg: "h-10 px-6 rounded-md gap-2",
         icon: "size-9 rounded-full",
-        // Figma CTA dimensions
         cta: "h-10 px-5 rounded-[10px] gap-2",
       },
     },
@@ -40,7 +50,13 @@ type ButtonProps = React.ComponentProps<"button"> &
 
 function Button({ className, variant, size, asChild = false, ...props }: ButtonProps) {
   const Comp = asChild ? Slot : "button";
-  return <Comp data-slot="button" className={cn(buttonVariants({ variant, size, className }))} {...props} />;
+  return (
+    <Comp
+      data-slot="button"
+      className={cn(buttonVariants({ variant, size, className }))}
+      {...props}
+    />
+  );
 }
 
 export { Button, buttonVariants };

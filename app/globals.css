@@ -2,89 +2,143 @@
 
 /* ===== Design Tokens (Figma-aligned) ===== */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  color-scheme: light;
+  /* Color System - Based on Figma Specifications */
+  --new-black: #000000;
+  --new-dark-grey: #374151;
+  --new-light-grey: #e5e7eb;
+  --new-super-light-grey: #f8fafc;
+  --new-calm-accent: #8b5cf6;
+  --new-bold-accent: #7b48d4;
+  --new-light-accent: #c4b5fd;
+  --white: #ffffff;
+  --dark-black: #111827;
+  --light-grey: #9ca3af;
 
-  --step-text: #111111;
-  --step-border: #E5E7EB;
-  --step-selected-bg: #F3E8FF;
-  --step-selected-border: #D6BCFA;
-  --step-accent: #7B48D4;
+  /* Component Variables */
+  --step-border: var(--new-light-grey);
+  --step-text: var(--new-black);
+  --step-darkgrey: var(--new-dark-grey);
+  --step-superlight: var(--new-super-light-grey);
+  --step-accent: var(--new-bold-accent);
+  --step-selected-bg: #f3e8ff;
+  --step-selected-border: #d6bcfa;
 
-  --step-superlight: #F7F7FB;
-  --step-darkgrey: #6B7280;
-
-  --step-body-size: 16px;
-  --step-body-line: 22px;
-  --step-body-weight: 400;
-
-  --step-heading-size: 16px;
-  --step-heading-line: 22px;
-  --step-heading-weight: 600;
-
-  --ring-accent: var(--step-accent);
-
-  --surface: #ffffff;
+  /* Layout Variables */
+  --background: var(--white);
+  --foreground: var(--new-black);
+  --surface: var(--white);
   --surface-muted: var(--step-superlight);
   --border-default: var(--step-border);
   --border-muted: #eaeaea;
+  --ring-accent: var(--step-accent);
 
+  /* Typography */
+  --step-body-size: 16px;
+  --step-body-line: 22px;
+  --step-body-weight: 400;
+  --step-heading-size: 16px;
+  --step-heading-line: 22px;
+  --step-heading-weight: 600;
   --h4-size: 24px;
   --h4-line: 28px;
   --h4-tracking: -0.01em;
-
   --label-xs-size: 12px;
   --label-xs-line: 16px;
 
+  /* Border Radius */
   --r-12: 12px;
   --r-16: 16px;
 
-  --field-icon: #9CA3AF;          /* default icon (light grey) */
-  --field-icon-hover: #6B7280;    /* hover (dark grey) */
+  /* Field States */
+  --field-icon: var(--light-grey);
+  --field-icon-hover: var(--new-dark-grey);
   --field-icon-active: var(--step-accent);
+
+  color-scheme: light;
 }
 
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: var(--dark-black);
+    --foreground: var(--white);
+    --step-text: var(--white);
+    --step-superlight: #1f2937;
+    --surface: #111827;
+    --border-default: #374151;
+  }
+}
+
+/* Tailwind Theme Integration */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-
   --color-step-text: var(--step-text);
   --color-step-border: var(--step-border);
   --color-step-selected-bg: var(--step-selected-bg);
   --color-step-selected-border: var(--step-selected-border);
   --color-step-accent: var(--step-accent);
-
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
   --color-border-default: var(--border-default);
   --color-border-muted: var(--border-muted);
   --color-ring-accent: var(--ring-accent);
-
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-/* Base */
-*, *::before, *::after { box-sizing: border-box; }
-html, body, #__next { height: 100%; }
+/* ===== Base Styles ===== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #__next {
+  height: 100%;
+}
 
 body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji");
+  font-family: var(--font-geist-sans, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji");
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-::selection { background: color-mix(in srgb, var(--step-accent) 20%, transparent); color: inherit; }
+::selection {
+  background: color-mix(in srgb, var(--step-accent) 20%, transparent);
+  color: inherit;
+}
 
-:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ring-accent); }
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ring-accent);
+}
 
-/* helpers */
-.h4 { font-size: var(--h4-size); line-height: var(--h4-line); letter-spacing: var(--h4-tracking); font-weight: 700; }
-.label-xs { font-size: var(--label-xs-size); line-height: var(--label-xs-line); font-weight: 500; color: var(--step-darkgrey); }
-.surface { background: var(--surface); border: 1px solid var(--border-default); border-radius: var(--r-16); }
-.surface-muted { background: var(--surface-muted); border: 1px dashed var(--border-default); border-radius: var(--r-16); }
+/* ===== Utility Classes ===== */
+.h4 {
+  font-size: var(--h4-size);
+  line-height: var(--h4-line);
+  letter-spacing: var(--h4-tracking);
+  font-weight: 700;
+}
+
+.label-xs {
+  font-size: var(--label-xs-size);
+  line-height: var(--label-xs-line);
+  font-weight: 500;
+  color: var(--step-darkgrey);
+}
+
+.surface {
+  background: var(--surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--r-16);
+}
+
+.surface-muted {
+  background: var(--surface-muted);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--r-16);
+}

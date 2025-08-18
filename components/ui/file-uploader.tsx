@@ -38,8 +38,11 @@ export default function FileUploader({
       let content = "";
       if (typeof result === "string") content = result;
       else {
-        try { content = new TextDecoder().decode(new Uint8Array(result as ArrayBuffer)); }
-        catch { content = ""; }
+        try {
+          content = new TextDecoder().decode(new Uint8Array(result as ArrayBuffer));
+        } catch {
+          content = "";
+        }
       }
       sessionStorage.setItem("uploadedFileName", file.name);
       sessionStorage.setItem("uploadedFileContent", content);
@@ -47,7 +50,8 @@ export default function FileUploader({
     };
 
     if (isPdf) reader.readAsDataURL(file);
-    else if (file.type.startsWith("text/") || /\.(txt|md|csv)$/i.test(file.name)) reader.readAsText(file);
+    else if (file.type.startsWith("text/") || /\.(txt|md|csv)$/i.test(file.name))
+      reader.readAsText(file);
     else reader.readAsDataURL(file);
   };
 
@@ -74,33 +78,44 @@ export default function FileUploader({
     <div className="w-full">
       {!uploadedFile ? (
         <>
-          {/* Fill parent (349px wrapper provided by Sidebar) */}
+          {/* Dropzone */}
           <div className="w-full">
             <div
               role="button"
               tabIndex={0}
               aria-describedby="upload-help"
               onClick={() => inputRef.current?.click()}
-              onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && inputRef.current?.click()}
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onKeyDown={(e) =>
+                (e.key === "Enter" || e.key === " ") && inputRef.current?.click()
+              }
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
               onDragLeave={() => setDragOver(false)}
               onDrop={onDrop}
               className={[
                 "rounded-[16px] border-2 border-dashed transition-colors",
                 "px-10 py-14 flex flex-col items-center justify-center text-center cursor-pointer",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--ring-accent)]",
-                dragOver ? "bg-[var(--surface-muted)] border-[var(--border-default)]" : "border-[var(--border-default)]",
+                dragOver
+                  ? "bg-[var(--surface-muted)] border-[var(--border-default)]"
+                  : "border-[var(--border-default)]",
               ].join(" ")}
               title="Click or drop a PDF file"
             >
               <div
                 className="mb-4 flex items-center justify-center w-10 h-10 rounded-md border-2"
-                style={{ borderColor: "var(--step-selected-border)", color: "var(--step-accent)" }}
+                style={{
+                  borderColor: "var(--step-selected-border)",
+                  color: "var(--step-accent)",
+                }}
                 aria-hidden
               >
                 <Paperclip className="w-5 h-5" />
               </div>
-              <p className="text-[18px] leading-6 text-[var(--step-text)]">
+              {/* FIX: use dark grey so it's visible on white in dark mode */}
+              <p className="text-[18px] leading-6 text-[var(--step-darkgrey)]">
                 Drag and drop your PDF files
               </p>
             </div>
@@ -115,15 +130,21 @@ export default function FileUploader({
             onChange={onChange}
             aria-describedby="upload-help"
           />
-          {/* helper text is rendered by Sidebar labels above */}
         </>
       ) : (
         <div className="w-full mt-4 rounded-[16px] border border-[var(--border-default)] bg-white px-5 py-4 flex items-center">
-          <div className="w-10 h-10 rounded-md border border-[var(--border-default)] flex items-center justify-center mr-4" aria-hidden>
+          <div
+            className="w-10 h-10 rounded-md border border-[var(--border-default)] flex items-center justify-center mr-4"
+            aria-hidden
+          >
             <FileText className="w-5 h-5 text-[var(--step-darkgrey)]" />
           </div>
           <div className="flex-1 min-w-0">
-            <span className="truncate text-[18px] leading-[22px] text-[var(--step-text)]" title={uploadedFile.name}>
+            {/* FIX: name text to dark grey (bg is white) */}
+            <span
+              className="truncate text-[18px] leading-[22px] text-[var(--step-darkgrey)]"
+              title={uploadedFile.name}
+            >
               {uploadedFile.name.replace(/\.pdf$/i, "")}
             </span>
           </div>

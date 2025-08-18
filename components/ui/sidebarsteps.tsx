@@ -38,11 +38,11 @@ function StepRow({ step }: { step: Step }) {
     "flex items-center justify-center w-10 h-10 rounded-full font-semibold leading-none border-2";
   const badgeClass = step.active
     ? "bg-[var(--step-accent)] border-[var(--step-accent)] text-white"
-    : "bg-white border-[var(--step-border)] text-[var(--step-text)]";
+    : "bg-white border-[var(--step-border)] text-[var(--step-darkgrey)]"; // ← changed
 
   const titleClass = step.active
     ? "text-[16px]/[22px] font-semibold text-[var(--step-accent)]"
-    : "text-[16px]/[22px] font-normal text-[var(--step-text)]";
+    : "text-[16px]/[22px] font-normal text-[var(--step-darkgrey)]"; // ← changed
 
   return (
     <div className={`${rowBase} ${rowClass}`} aria-current={step.active ? "step" : undefined}>

@@ -1,6 +1,6 @@
-// components/topic-selection-component.tsx
 "use client";
 
+import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mic, Square } from "lucide-react";
@@ -23,11 +23,11 @@ export default function TopicSelection() {
     "Second-Order Circuits",
   ];
 
-  // multi-line value
+  // single-select value
   const [query, setQuery] = useState("");
   const selectedTopic = useMemo(() => (query.trim() ? query.trim() : null), [query]);
 
-  // mic UI state (wire Web Speech later if you want)
+  // mic UI state
   const [recording, setRecording] = useState(false);
   const toggleMic = () => setRecording((r) => !r);
 
@@ -42,9 +42,16 @@ export default function TopicSelection() {
   }, [query]);
 
   const pick = (label: string) => setQuery((prev) => (prev === label ? "" : label));
+
   const proceed = () => {
-    if (!selectedTopic) return alert("Please select a topic before proceeding.");
-    router.push("/simple-explanation");
+    if (!selectedTopic) {
+      alert("Please select a topic before proceeding.");
+      return;
+    }
+    try {
+      sessionStorage.setItem("topicName", selectedTopic);
+    } catch {}
+    router.push(`/simple-explanation?topic=${encodeURIComponent(selectedTopic)}`);
   };
 
   // a11y ids
@@ -62,13 +69,16 @@ export default function TopicSelection() {
           </span>
         </div>
 
-        {/* title */}
-        <h1 className="text-center text-[48px]/[56px] font-semibold tracking-[-0.01em] text-[var(--step-text)] mb-4">
+        {/* title – fixed dark so it never goes white */}
+        <h1 className="text-center text-[48px]/[56px] font-semibold tracking-[-0.01em] text-[var(--step-darkgrey)] mb-4">
           Topic Selection
         </h1>
 
         {/* helper */}
-        <p id={helperId} className={`${STACK_W} text-left text-[15px]/[22px] text-[var(--step-darkgrey)] mb-6`}>
+        <p
+          id={helperId}
+          className={`${STACK_W} text-left text-[15px]/[22px] text-[var(--step-darkgrey)] mb-6`}
+        >
           What specific concept within Electrical Engineering do you want to master?
         </p>
 
@@ -95,7 +105,7 @@ export default function TopicSelection() {
               w-full min-h-16 max-h-[208px] resize-none
               rounded-[16px] border border-[var(--step-border)]
               pl-6 pr-14 py-4
-              text-[18px]/[26px] text-[var(--step-text)]
+              text-[18px]/[26px] text-[var(--step-darkgrey)]
               placeholder:text-[var(--step-darkgrey)]
               outline-none transition-colors focus:border-[var(--step-accent)]
             "
@@ -112,39 +122,45 @@ export default function TopicSelection() {
               group absolute right-3 top-1/2 -translate-y-1/2
               h-9 w-9 rounded-[12px]
               border border-[var(--step-border)] bg-white
-              hover:bg-[var(--step-superlight)]
+              hover:bg-white
               inline-flex items-center justify-center
             "
           >
             {recording ? (
-              // active = accent purple
-              <Square
-                className="h-4 w-4"
-                style={{ color: "var(--step-accent)" }}
-              />
+              <Square className="h-4 w-4" style={{ color: "var(--step-accent)" }} />
             ) : (
-              // default = light grey, hover = darker grey (with safe fallbacks)
               <Mic
                 className="h-4 w-4 transition-colors"
                 style={{ color: "var(--field-icon, #9CA3AF)" }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--field-icon-hover, #6B7280)")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--field-icon, #9CA3AF)")}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.color = "var(--field-icon-hover, #6B7280)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.color = "var(--field-icon, #9CA3AF)")
+                }
               />
             )}
           </button>
 
           <p id={micHintId} className="sr-only">
-            Use the microphone button to dictate the topic. Press again to stop recording. Press Escape to clear.
+            Use the microphone button to dictate the topic. Press again to stop recording. Press
+            Escape to clear.
           </p>
           <div aria-live="polite" className="sr-only">
             {recording ? "Recording started." : "Recording stopped."}
           </div>
         </div>
 
-        {/* chips */}
+        {/* chips (single-select) */}
         <div className={`${STACK_W} flex flex-wrap gap-3`}>
           {topics.map((t) => (
-            <Chip key={t} label={t} selected={selectedTopic === t} onClick={() => pick(t)} />
+            <TopicChipInline
+              key={t}
+              label={t}
+              selected={selectedTopic === t}
+              onClick={() => pick(t)}
+              closable={selectedTopic === t}
+            />
           ))}
         </div>
 
@@ -154,7 +170,9 @@ export default function TopicSelection() {
             type="button"
             onClick={proceed}
             className={`inline-flex items-center gap-2 px-5 h-10 rounded-[10px] text-white ${
-              selectedTopic ? "bg-[var(--step-accent)] hover:brightness-95" : "bg-[#4B5563] hover:bg-[#374151]"
+              selectedTopic
+                ? "bg-[var(--step-accent)] hover:brightness-95"
+                : "bg-[#4B5563] hover:bg-[#374151]"
             }`}
           >
             Proceed <span>→</span>
@@ -165,29 +183,34 @@ export default function TopicSelection() {
   );
 }
 
-/* pill chip with optional × when selected */
-function Chip({
+/* Inline chip so this file compiles without extra imports. */
+function TopicChipInline({
   label,
-  selected,
+  selected = false,
   onClick,
+  closable = false,
 }: {
   label: string;
-  selected: boolean;
+  selected?: boolean;
   onClick: () => void;
+  closable?: boolean;
 }) {
+  const base =
+    "inline-flex items-center justify-center h-9 px-4 rounded-full border text-[15px] leading-[20px] transition-colors select-none cursor-pointer " +
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--ring-accent)]";
+
+  const styles = selected
+    ? "bg-white text-[var(--step-accent)] border-[var(--step-selected-border)] hover:bg-white hover:text-[var(--step-accent)] hover:border-[var(--step-selected-border)]"
+    : "bg-white text-[var(--step-darkgrey)] border-[var(--step-border)] hover:bg-white hover:text-[var(--step-darkgrey)] hover:border-[var(--step-selected-border)]";
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={selected}
-      className={`inline-flex items-center h-9 px-4 rounded-full border transition-colors select-none ${
-        selected
-          ? "border-[var(--step-selected-border)] text-[var(--step-accent)] bg-white"
-          : "border-[var(--step-border)] text-[var(--step-text)] bg-white hover:bg-[var(--step-superlight)]"
-      }`}
-    >
+    <button type="button" aria-pressed={selected} onClick={onClick} className={base + " " + styles}>
       <span className="truncate">{label}</span>
-      {selected && <span aria-hidden className="ml-1.5">×</span>}
+      {selected && closable && (
+        <span className="ml-1.5" aria-hidden>
+          ×
+        </span>
+      )}
     </button>
   );
 }

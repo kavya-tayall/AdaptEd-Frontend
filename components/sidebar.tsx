@@ -1,12 +1,13 @@
-"use client";
 
+// Fixed Sidebar Component
+"use client";
 import { useState } from "react";
 import SidebarSteps from "./ui/sidebarsteps";
 import FileUploader from "./ui/file-uploader";
 
 export default function Sidebar() {
   const [, setLastUploaded] = useState<{ name: string; content: string; type: string } | null>(null);
-
+  
   const steps = [
     { number: 1, title: "Topic Selection", active: true },
     { number: 2, title: "Simple Explanation", active: false },
@@ -19,41 +20,56 @@ export default function Sidebar() {
   return (
     <aside
       aria-label="Sidebar"
-      className="w-[405px] shrink-0 bg-white border-r border-[var(--step-border)]"
+      className="min-h-screen shrink-0 bg-white border-r"
+      style={{
+        width: '26.79%', // 405/1512 from Figma ratio
+        minHeight: '100vh',
+        backgroundColor: 'white',
+        borderRight: '1px solid #e5e7eb',
+        borderColor: 'var(--new-light-grey, #e5e7eb)',
+      }}
     >
-      {/* sticky so the rail behaves like the Figma frame */}
-      <div className="sticky top-0 h-dvh flex flex-col">
-        {/* ===== Header (405×69) with pt32 pr24 pb16 pl32 and bottom divider ===== */}
-        <header className="pl-8 pr-6 pt-8 pb-4 border-b border-[var(--step-border)]">
-          <h1 className="text-[24px]/[28px] font-bold tracking-[-0.01em]">AdaptEd</h1>
+      {/* Auto layout container matching Figma flow with -1 gap */}
+      <div
+        className="flex flex-col h-full"
+        style={{
+          paddingBottom: '24px', // Bottom padding from Figma
+        }}
+      >
+        {/* Header Section */}
+        <header className="px-8 pt-8 pb-4 border-b border-gray-200">
+          <h1 className="text-[24px]/[28px] font-bold tracking-[-0.01em] text-black">
+            AdaptEd
+          </h1>
         </header>
 
-        {/* ===== Progress block ===== */}
-        <nav aria-label="Progress" className="pl-8 pr-6 pt-6 pb-6 border-b border-[var(--step-border)]">
-          <h2 className="text-[15px] font-semibold tracking-[0.18em] uppercase text-[var(--step-text)]">
+        {/* Progress Section with -1px margin for gap */}
+        <nav
+          aria-label="Progress"
+          className="px-8 pt-6 pb-6 border-b border-gray-200 -mt-px"
+        >
+          <h2 className="text-[15px] font-semibold tracking-[0.18em] uppercase text-gray-700">
             Topic Progress
           </h2>
-          <p className="mt-1 text-[15px] text-[var(--step-darkgrey)]">
+          <p className="mt-1 text-[15px] text-gray-600">
             Master the concept through these steps
           </p>
-
-          {/* Inner content must be exactly 349px (405 - 32 - 24) */}
-          <div className="mt-4 w-[349px]">
+          {/* Dynamic content width based on container */}
+          <div className="mt-4" style={{ width: 'calc(100% - 0px)' }}>
             <SidebarSteps steps={steps} />
           </div>
         </nav>
 
-        {/* ===== Uploader block ===== */}
-        <section className="pl-8 pr-6 pt-6 pb-8">
-          <h3 className="text-[15px] font-semibold tracking-[0.18em] uppercase text-[var(--step-text)]">
+        {/* Uploader Section with -1px margin for gap */}
+        <section className="px-8 pt-6 flex-1 -mt-px">
+          <h3 className="text-[15px] font-semibold tracking-[0.18em] uppercase text-gray-700">
             Supplemental Files
           </h3>
-          <p className="mt-1 text-[15px] text-[var(--step-darkgrey)]">
+          <p className="mt-1 text-[15px] text-gray-600">
             Personalize your AdaptEd journey
           </p>
-
-          {/* Dropzone width must also be 349px to align with steps */}
-          <div className="mt-4 w-[349px]">
+          {/* Dynamic content width based on container */}
+          <div className="mt-4" style={{ width: 'calc(100% - 0px)' }}>
             <FileUploader onLoaded={(f) => setLastUploaded(f)} />
           </div>
         </section>
