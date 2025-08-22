@@ -20,10 +20,9 @@ export default function Sidebar() {
   return (
     <aside
       aria-label="Sidebar"
-      className="min-h-screen shrink-0 bg-white border-r"
+      className="h-screen overflow-y-auto shrink-0 bg-white border-r"
       style={{
         width: '26.79%', // 405/1512 from Figma ratio
-        minHeight: '100vh',
         backgroundColor: 'white',
         borderRight: '1px solid #e5e7eb',
         borderColor: 'var(--new-light-grey, #e5e7eb)',

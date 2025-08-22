@@ -92,8 +92,8 @@ export default function TopicSelection() {
             ref={taRef}
             id={inputId}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setQuery(e.target.value)}
+            onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
               if (e.key === "Escape" && query) {
                 e.preventDefault();
                 setQuery("");

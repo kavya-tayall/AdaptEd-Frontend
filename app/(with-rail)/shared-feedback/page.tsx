@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, Mic, Volume2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { evaluateAnalogy, evaluateExplanation, AnalogyResponse, ExplanationResponse } from "@/lib/api";
 
 type Message = { role: "user" | "assistant"; content: string };
 type FeedbackType = "explanation" | "analogy";
@@ -95,6 +96,13 @@ export default function SharedFeedbackPage() {
   const [loadingRetry, setLoadingRetry] = useState(false);
   const [thread, setThread] = useState<Message[]>([]);
 
+  // --- Backend evaluation state ---
+  const [evalLoading, setEvalLoading] = useState(false);
+  const [evalError, setEvalError] = useState<string | null>(null);
+  const [evalWarning, setEvalWarning] = useState<string | undefined>(undefined);
+  const [explanationEval, setExplanationEval] = useState<ExplanationResponse["data"]["evaluation"] | null>(null);
+  const [analogyEval, setAnalogyEval] = useState<AnalogyResponse["data"]["evaluation"] | null>(null);
+
   const feedback = useMemo(() => generateFeedback(content), [content]);
 
   useEffect(() => {
@@ -104,6 +112,40 @@ export default function SharedFeedbackPage() {
     setTab("question");
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }, [content]);
+
+  // Fetch evaluation from backend when content/topic/type changes
+  useEffect(() => {
+    let isCancelled = false;
+    async function run() {
+      setEvalLoading(true);
+      setEvalError(null);
+      setEvalWarning(undefined);
+      try {
+        if (type === "analogy") {
+          const res = await evaluateAnalogy(topicName, content);
+          if (isCancelled) return;
+          setAnalogyEval(res.data.evaluation);
+          setExplanationEval(null);
+          if (res.warning) setEvalWarning(res.warning);
+        } else {
+          const res = await evaluateExplanation(topicName, content);
+          if (isCancelled) return;
+          setExplanationEval(res.data.evaluation);
+          setAnalogyEval(null);
+          if (res.warning) setEvalWarning(res.warning);
+        }
+      } catch (err: any) {
+        if (isCancelled) return;
+        setEvalError(err?.message || "Failed to fetch evaluation");
+      } finally {
+        if (!isCancelled) setEvalLoading(false);
+      }
+    }
+    run();
+    return () => {
+      isCancelled = true;
+    };
+  }, [type, topicName, content]);
 
   const submitQuestion = () => {
     const q = question.trim();
@@ -213,7 +255,61 @@ export default function SharedFeedbackPage() {
         {/* Scrollable content area */}
         <div className="flex-1 overflow-y-auto p-8">
           <div className="flex flex-col items-start">
-            {/* Feedback sections */}
+            {/* AI Evaluation (from backend) */}
+            <div
+              className="bg-white border rounded-[8px] flex flex-col mb-6"
+              style={{
+                width: "59.26%",
+                borderColor: "#D1D5DB",
+                gap: "12px",
+                padding: "16px",
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-[16px] font-semibold text-black">
+                  AI Evaluation
+                </h3>
+                {evalLoading && (
+                  <span className="text-[12px] text-gray-500">Evaluating…</span>
+                )}
+              </div>
+              {evalError && (
+                <div className="text-[14px] text-red-600">
+                  {evalError}
+                </div>
+              )}
+              {evalWarning && !evalError && (
+                <div className="text-[13px] text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-md p-2">
+                  {evalWarning}
+                </div>
+              )}
+              {!evalError && !evalLoading && (
+                <div className="text-[14px] text-black space-y-2">
+                  {type === "analogy" && analogyEval && (
+                    <div className="space-y-1">
+                      <div>Accuracy: <span className="font-medium">{analogyEval.accuracy}</span></div>
+                      <div>Clarity: <span className="font-medium">{analogyEval.clarity}</span></div>
+                      <div>Overall: <span className="font-medium">{analogyEval.overall}</span></div>
+                      <div className="mt-2"><span className="font-semibold">Strengths:</span> {analogyEval.strengths}</div>
+                      <div><span className="font-semibold">Improvements:</span> {analogyEval.improvements}</div>
+                    </div>
+                  )}
+                  {type !== "analogy" && explanationEval && (
+                    <div className="space-y-1">
+                      <div>Score: <span className="font-medium">{explanationEval.score}</span> / 10</div>
+                      <div className="mt-2"><span className="font-semibold">Strengths:</span> {explanationEval.strengths}</div>
+                      <div><span className="font-semibold">Improvements:</span> {explanationEval.improvements}</div>
+                      <div><span className="font-semibold">Suggestions:</span> {explanationEval.suggestions}</div>
+                    </div>
+                  )}
+                  {!analogyEval && !explanationEval && (
+                    <div className="text-gray-600">No evaluation available.</div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Feedback sections (heuristic) */}
             <div
               className="bg-white border rounded-[8px] flex flex-col mb-6"
               style={{
