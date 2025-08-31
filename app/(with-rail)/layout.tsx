@@ -14,7 +14,7 @@ export default function WithRailLayout({ children }: { children: React.ReactNode
           paddingLeft: '0px',
           paddingRight: '40px',
           paddingTop: '0px',
-          paddingBottom: '56px',
+          paddingBottom: '0px',
         }}
       >
         {children}

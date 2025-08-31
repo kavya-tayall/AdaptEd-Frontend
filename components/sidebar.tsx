@@ -2,19 +2,36 @@
 // Fixed Sidebar Component
 "use client";
 import { useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import SidebarSteps from "./ui/sidebarsteps";
 import FileUploader from "./ui/file-uploader";
 
 export default function Sidebar() {
   const [, setLastUploaded] = useState<{ name: string; content: string; type: string } | null>(null);
+  const pathname = usePathname();
+  const search = useSearchParams();
+  
+  // Determine current step based on route
+  const currentStep = (() => {
+    const path = pathname || "/";
+    if (path === "/") return 1; // Topic Selection
+    if (path.startsWith("/simple-explanation")) return 2; // Simple Explanation
+    if (path.startsWith("/shared-feedback")) {
+      const type = search?.get("type");
+      return type === "analogy" ? 5 : 3; // Analogy Feedback vs Explanation Feedback
+    }
+    if (path.startsWith("/create-analogy")) return 4; // Create Analogy
+    if (path.startsWith("/review-summary")) return 6; // Review & Summary
+    return 1;
+  })();
   
   const steps = [
-    { number: 1, title: "Topic Selection", active: true },
-    { number: 2, title: "Simple Explanation", active: false },
-    { number: 3, title: "Explanation Feedback", active: false },
-    { number: 4, title: "Create Analogy", active: false },
-    { number: 5, title: "Analogy Feedback", active: false },
-    { number: 6, title: "Review & Summary", active: false },
+    { number: 1, title: "Topic Selection", active: currentStep === 1 },
+    { number: 2, title: "Simple Explanation", active: currentStep === 2 },
+    { number: 3, title: "Explanation Feedback", active: currentStep === 3 },
+    { number: 4, title: "Create Analogy", active: currentStep === 4 },
+    { number: 5, title: "Analogy Feedback", active: currentStep === 5 },
+    { number: 6, title: "Review & Summary", active: currentStep === 6 },
   ];
 
   return (
@@ -32,7 +49,7 @@ export default function Sidebar() {
       <div
         className="flex flex-col h-full"
         style={{
-          paddingBottom: '24px', // Bottom padding from Figma
+          paddingBottom: '40px', // Extra bottom whitespace for scroll area
         }}
       >
         {/* Header Section */}
@@ -54,13 +71,13 @@ export default function Sidebar() {
             Master the concept through these steps
           </p>
           {/* Dynamic content width based on container */}
-          <div className="mt-4" style={{ width: 'calc(100% - 0px)' }}>
+          <div className="mt-4 pb-4" style={{ width: 'calc(100% - 0px)' }}>
             <SidebarSteps steps={steps} />
           </div>
         </nav>
 
         {/* Uploader Section with -1px margin for gap */}
-        <section className="px-8 pt-6 flex-1 -mt-px">
+        <section className="px-8 pt-6 pb-8 flex-1 -mt-px">
           <h3 className="text-[15px] font-semibold tracking-[0.18em] uppercase text-gray-700">
             Supplemental Files
           </h3>

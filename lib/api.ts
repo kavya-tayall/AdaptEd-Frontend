@@ -36,6 +36,10 @@ export type AnalogyResponse = ApiSuccess<{
 	evaluation: AnalogyEvaluation | null;
 }>;
 
+export type ChatResponse = ApiSuccess<{
+	reply: string;
+}>;
+
 function getApiBase(): string {
 	const base = process.env.NEXT_PUBLIC_API_BASE || "";
 	return base.replace(/\/$/, "");
@@ -55,12 +59,33 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 	return (await res.json()) as T;
 }
 
-export async function evaluateExplanation(topic: string, content: string) {
-	return postJson<ExplanationResponse>("/api/explanations", { topic, content });
+export async function evaluateExplanation(
+	topic: string,
+	content: string,
+	contextName?: string,
+	contextData?: string
+) {
+	return postJson<ExplanationResponse>("/api/explanations", { topic, content, contextName, contextData });
 }
 
-export async function evaluateAnalogy(topic: string, content: string) {
-	return postJson<AnalogyResponse>("/api/analogies", { topic, content });
+export async function evaluateAnalogy(
+	topic: string,
+	content: string,
+	contextName?: string,
+	contextData?: string
+) {
+	return postJson<AnalogyResponse>("/api/analogies", { topic, content, contextName, contextData });
+}
+
+export async function askFeedbackQuestion(
+	topic: string,
+	content: string,
+	question: string,
+	type: "explanation" | "analogy",
+	contextName?: string,
+	contextData?: string
+) {
+	return postJson<ChatResponse>("/api/feedback", { topic, content, question, type, contextName, contextData });
 }
 
 

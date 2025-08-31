@@ -36,12 +36,15 @@ async function evaluateAnalogy(topic: string, content: string): Promise<AnalogyE
 
 export async function POST(req: NextRequest) {
 	try {
-		const { topic, content } = await req.json();
+		const { topic, content, contextName, contextData } = await req.json();
 		if (!topic || !content) return NextResponse.json({ success: false, error: "Missing topic or content" }, { status: 400 });
 		let evaluation: AnalogyEval | null = null;
 		let warning: string | undefined = undefined;
 		try {
-			evaluation = await evaluateAnalogy(topic, content);
+			const prefix = contextData
+				? `Context from ${contextName || "attachment"}:\n${contextData.slice(0, 2000)}\n\n`
+				: "";
+			evaluation = await evaluateAnalogy(topic, prefix + content);
 		} catch (e) {
 			warning = "OpenAI evaluation unavailable";
 		}

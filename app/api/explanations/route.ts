@@ -40,12 +40,15 @@ async function evaluateExplanation(topic: string, content: string): Promise<Expl
 
 export async function POST(req: NextRequest) {
 	try {
-		const { topic, content } = await req.json();
+		const { topic, content, contextName, contextData } = await req.json();
 		if (!topic || !content) return NextResponse.json({ success: false, error: "Missing topic or content" }, { status: 400 });
 		let evaluation: ExplanationEval | null = null;
 		let warning: string | undefined = undefined;
 		try {
-			evaluation = await evaluateExplanation(topic, content);
+			const prefix = contextData
+				? `Context from ${contextName || "attachment"}:\n${contextData.slice(0, 2000)}\n\n`
+				: "";
+			evaluation = await evaluateExplanation(topic, prefix + content);
 		} catch (e) {
 			warning = "OpenAI evaluation unavailable";
 		}

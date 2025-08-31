@@ -88,7 +88,7 @@ export default function ReviewSummaryPage() {
   };
 
   const onRestart = () => {
-    router.push("/simple-explanation"); // or `/` or your topic selection route
+    router.push("/");
   };
 
   return (

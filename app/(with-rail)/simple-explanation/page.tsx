@@ -210,7 +210,7 @@ export default function SimpleExplanationPage() {
         <div className={`${STACK_W} flex items-center justify-between`}>
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={() => router.push("/")}
             className="inline-flex items-center gap-2 h-10 rounded-[10px] px-4 border border-[var(--step-border)] bg-white text-[var(--step-darkgrey)] hover:bg-[var(--step-selected-bg)]"
           >
             ← <span>Back</span>

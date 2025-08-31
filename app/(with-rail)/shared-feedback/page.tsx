@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, Mic, Volume2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { evaluateAnalogy, evaluateExplanation, AnalogyResponse, ExplanationResponse } from "@/lib/api";
+import { evaluateAnalogy, evaluateExplanation, AnalogyResponse, ExplanationResponse, askFeedbackQuestion } from "@/lib/api";
 
 type Message = { role: "user" | "assistant"; content: string };
 type FeedbackType = "explanation" | "analogy";
@@ -121,14 +121,16 @@ export default function SharedFeedbackPage() {
       setEvalError(null);
       setEvalWarning(undefined);
       try {
+        const contextName = typeof window !== "undefined" ? sessionStorage.getItem("uploadedFileName") || undefined : undefined;
+        const contextData = typeof window !== "undefined" ? sessionStorage.getItem("uploadedFileContent") || undefined : undefined;
         if (type === "analogy") {
-          const res = await evaluateAnalogy(topicName, content);
+          const res = await evaluateAnalogy(topicName, content, contextName, contextData);
           if (isCancelled) return;
           setAnalogyEval(res.data.evaluation);
           setExplanationEval(null);
           if (res.warning) setEvalWarning(res.warning);
         } else {
-          const res = await evaluateExplanation(topicName, content);
+          const res = await evaluateExplanation(topicName, content, contextName, contextData);
           if (isCancelled) return;
           setExplanationEval(res.data.evaluation);
           setAnalogyEval(null);
@@ -147,12 +149,21 @@ export default function SharedFeedbackPage() {
     };
   }, [type, topicName, content]);
 
-  const submitQuestion = () => {
+  const submitQuestion = async () => {
     const q = question.trim();
     if (!q) return;
-    const reply = mockAnswer(q);
-    setThread((t) => [...t, { role: "user", content: q }, { role: "assistant", content: reply }]);
+    setThread((t) => [...t, { role: "user", content: q }]);
     setQuestion("");
+    try {
+      const contextName = typeof window !== "undefined" ? sessionStorage.getItem("uploadedFileName") || undefined : undefined;
+      const contextData = typeof window !== "undefined" ? sessionStorage.getItem("uploadedFileContent") || undefined : undefined;
+      const res = await askFeedbackQuestion(topicName, content, q, type, contextName, contextData);
+      const reply = res?.data?.reply || dynamicMockAnswer(q, content, topicName);
+      setThread((t) => [...t, { role: "assistant", content: reply }]);
+    } catch {
+      const reply = dynamicMockAnswer(q, content, topicName);
+      setThread((t) => [...t, { role: "assistant", content: reply }]);
+    }
   };
 
   const submitRetry = () => {
@@ -213,48 +224,50 @@ export default function SharedFeedbackPage() {
   const overrideLabel = type === "explanation" ? "Go to Analogy →" : "Finish →";
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col bg-gray-50">
       {/* Main Content */}
-      <main className="flex-1 flex flex-col">
-        {/* Header with title and explanation card -> STICKY */}
-        <div className="bg-white border-b border-gray-200 p-8 sticky top-0 z-20">
-          <h1
-            className="text-[40px] font-medium text-center text-black mb-2"
-            style={{
-              fontFamily:
-                "'Kantumruv Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-            }}
-          >
-            {title}
-          </h1>
+      <main className="flex-1 flex flex-col min-h-0">
+        {/* Scrollable content (header + content) */}
+        <div className="flex-1 overflow-y-auto">
+          {/* Header (now scrolls with content) */}
+          <div className="bg-white border-b border-gray-200 p-8">
+            <h1
+              className="text-[40px] font-medium text-center text-black mb-2"
+              style={{
+                fontFamily:
+                  "'Kantumruv Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+              }}
+            >
+              {title}
+            </h1>
 
-          {/* Topic line */}
-          <p className="text-center text-sm text-gray-600 mb-6">
-            Topic:&nbsp;<span className="font-medium text-gray-800">{topicName}</span>
-          </p>
+            {/* Topic line */}
+            <p className="text-center text-sm text-gray-600 mb-6">
+              Topic:&nbsp;<span className="font-medium text-gray-800">{topicName}</span>
+            </p>
 
-          {/* Your Explanation/Analogy Card - Proportional width */}
-          <div className="mx-auto" style={{ maxWidth: "45.9%" }}>
-            <div className="bg-[#F8F8F8] border border-[#E5E5E5] rounded-[16px] p-4">
-              <p className="text-[14px] font-semibold text-black mb-2">
-                Your {type === "analogy" ? "Analogy" : "Explanation"}:
-              </p>
-              <div
-                className="text-black italic leading-relaxed"
-                style={{
-                  fontFamily:
-                    "'Ag Midfi body', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                }}
-              >
-                {content}
+            {/* Your Explanation/Analogy Card - Proportional width */}
+            <div className="mx-auto" style={{ maxWidth: "45.9%" }}>
+              <div className="bg-[#F8F8F8] border border-[#E5E5E5] rounded-[16px] p-4">
+                <p className="text-[14px] font-semibold text-black mb-2">
+                  Your {type === "analogy" ? "Analogy" : "Explanation"}:
+                </p>
+                <div
+                  className="text-black italic leading-relaxed"
+                  style={{
+                    fontFamily:
+                      "'Ag Midfi body', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+                  }}
+                >
+                  {content}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Scrollable content area */}
-        <div className="flex-1 overflow-y-auto p-8">
-          <div className="flex flex-col items-start">
+          {/* Content area with extra bottom padding to avoid sticky overlap */}
+          <div className="p-8 pb-40">
+            <div className="flex flex-col items-start">
             {/* AI Evaluation (from backend) */}
             <div
               className="bg-white border rounded-[8px] flex flex-col mb-6"
@@ -338,14 +351,11 @@ export default function SharedFeedbackPage() {
                   </div>
                 </div>
                 <div className="text-[15px] leading-[24px] text-black" style={{ gap: "4px" }}>
-                  <div>
-                    • "Shows how voltage, current, and resistance are connected" — vague and
-                    abstract; doesn't explain how they relate.
-                  </div>
-                  <div>
-                    • "With a formula using V, I, and R" — letters may confuse someone with no
-                    prior knowledge; unclear what they represent.
-                  </div>
+                  {feedback.wording.length ? (
+                    feedback.wording.map((w, i) => <div key={i}>• {w}</div>)
+                  ) : (
+                    <div>• Wording looks clear.</div>
+                  )}
                 </div>
               </div>
 
@@ -358,9 +368,11 @@ export default function SharedFeedbackPage() {
                   <h3 className="text-[16px] font-semibold text-black">Fill Logical Gaps</h3>
                 </div>
                 <div className="text-[15px] leading-[24px] text-black" style={{ gap: "4px" }}>
-                  <div>• Doesn't state what the formula actually is (Ohm's Law: V = I×R).</div>
-                  <div>• Doesn't explain what voltage, current, or resistance mean in basic terms.</div>
-                  <div>• No explanation of why or when you would use this rule.</div>
+                  {feedback.logic.length ? (
+                    feedback.logic.map((l, i) => <div key={i}>• {l}</div>)
+                  ) : (
+                    <div>• Logical structure looks complete.</div>
+                  )}
                 </div>
               </div>
 
@@ -380,9 +392,10 @@ export default function SharedFeedbackPage() {
               )}
             </div>
           </div>
+          </div>
         </div>
 
-        {/* Bottom Input Area */}
+        {/* Bottom Input Area (sticky pinned to bottom of scroll container) */}
         <div className="sticky bottom-0 z-10 bg-white border-t border-gray-200 p-6">
           <div className="flex items-end justify-center gap-2">
             {/* Back Button */}
@@ -487,6 +500,17 @@ export default function SharedFeedbackPage() {
 }
 
 /* ---------- Bubbles ---------- */
+function renderMarkdownToHtml(text: string) {
+  const escaped = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  const withBold = escaped.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  const withItalics = withBold.replace(/(^|[^*])\*(?!\s)([^*]+?)\*(?!\*)/g, "$1<em>$2</em>");
+  const withBreaks = withItalics.replace(/\n/g, "<br />");
+  return withBreaks;
+}
+
 function AssistantBubble({ text }: { text: string }) {
   return (
     <div className="flex justify-start">
@@ -499,7 +523,10 @@ function AssistantBubble({ text }: { text: string }) {
           gap: "8px",
         }}
       >
-        <div className="text-[14px] leading-[20px] text-black whitespace-pre-wrap">{text}</div>
+        <div
+          className="text-[14px] leading-[20px] text-black"
+          dangerouslySetInnerHTML={{ __html: renderMarkdownToHtml(text) }}
+        />
       </div>
     </div>
   );
@@ -540,11 +567,18 @@ function generateFeedback(text: string) {
   return { wording, logic };
 }
 
-function mockAnswer(q: string) {
-  return [
-    "Sure!",
-    "• Voltage is the push that makes electricity move.",
-    "• Current is how much electricity is flowing.",
-    "• Resistance is what slows the electricity down.",
-  ].join("\n");
+function dynamicMockAnswer(q: string, content: string, topic: string) {
+  const lead = q.toLowerCase().includes("why")
+    ? "Here's the reasoning:"
+    : q.toLowerCase().includes("how")
+    ? "Here's how to approach it:"
+    : "Here are concrete pointers:";
+  const bullets = [
+    `Topic: ${topic}`,
+    `Your draft mentions: "${content.slice(0, 120)}${content.length > 120 ? "…" : ""}"`,
+    "Try one specific example using everyday objects.",
+    "Define key terms in one short sentence each.",
+    "Close with a one-line summary that a 12-year-old could repeat.",
+  ];
+  return [lead, ...bullets.map((b) => `• ${b}`)].join("\n");
 }

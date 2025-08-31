@@ -142,10 +142,10 @@ export default function FileUploader({
           <div className="flex-1 min-w-0">
             {/* FIX: name text to dark grey (bg is white) */}
             <span
-              className="truncate text-[18px] leading-[22px] text-[var(--step-darkgrey)]"
+              className="truncate block max-w-full text-[18px] leading-[22px] text-[var(--step-darkgrey)]"
               title={uploadedFile.name}
             >
-              {uploadedFile.name.replace(/\.pdf$/i, "")}
+              {uploadedFile.name}
             </span>
           </div>
           <button
