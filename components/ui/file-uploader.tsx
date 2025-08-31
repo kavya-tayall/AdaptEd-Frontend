@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Paperclip, FileText, X } from "lucide-react";
 
 type FileUploaderProps = {
-  onLoaded?: (args: { name: string; content: string; type: string }) => void;
+  onLoaded?: (args: { name: string; content: string; type: string; fileId?: string }) => void;
   accept?: string;
   multiple?: boolean;
 };
@@ -20,20 +20,42 @@ export default function FileUploader({
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleFile = (file: File) => {
+  const uploadToServer = async (file: File): Promise<string | undefined> => {
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/files", { method: "POST", body: fd });
+      if (!res.ok) return undefined;
+      const json = await res.json();
+      const fileId = json?.fileId as string | undefined;
+      if (fileId) sessionStorage.setItem("uploadedFileId", fileId);
+      return fileId;
+    } catch {
+      return undefined;
+    }
+  };
+
+  useEffect(() => {
+    // By default, no file is considered attached on fresh mounts
+    try { sessionStorage.setItem("uploadedFileAttached", "0"); } catch {}
+  }, []);
+
+  const handleFile = async (file: File) => {
     setUploadedFile(file);
 
-    const saveMetaOnly = () => {
+    const saveMetaOnly = async () => {
       sessionStorage.setItem("uploadedFileName", file.name);
       sessionStorage.setItem("uploadedFileContent", "");
-      onLoaded?.({ name: file.name, content: "", type: file.type || "unknown" });
+      sessionStorage.setItem("uploadedFileAttached", "1");
+      const fileId = await uploadToServer(file);
+      onLoaded?.({ name: file.name, content: "", type: file.type || "unknown", fileId });
     };
 
     const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
     if (isPdf && file.size > MAX_INLINE_BYTES) return saveMetaOnly();
 
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       const result = reader.result ?? "";
       let content = "";
       if (typeof result === "string") content = result;
@@ -46,7 +68,9 @@ export default function FileUploader({
       }
       sessionStorage.setItem("uploadedFileName", file.name);
       sessionStorage.setItem("uploadedFileContent", content);
-      onLoaded?.({ name: file.name, content, type: file.type || "unknown" });
+      sessionStorage.setItem("uploadedFileAttached", "1");
+      const fileId = await uploadToServer(file);
+      onLoaded?.({ name: file.name, content, type: file.type || "unknown", fileId });
     };
 
     if (isPdf) reader.readAsDataURL(file);
@@ -57,7 +81,7 @@ export default function FileUploader({
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
-    if (f) handleFile(f);
+    if (f) void handleFile(f);
     if (inputRef.current) inputRef.current.value = "";
   };
 
@@ -65,13 +89,15 @@ export default function FileUploader({
     e.preventDefault();
     setDragOver(false);
     const f = e.dataTransfer.files?.[0];
-    if (f) handleFile(f);
+    if (f) void handleFile(f);
   };
 
   const removeFile = () => {
     setUploadedFile(null);
     sessionStorage.removeItem("uploadedFileName");
     sessionStorage.removeItem("uploadedFileContent");
+    sessionStorage.removeItem("uploadedFileId");
+    sessionStorage.setItem("uploadedFileAttached", "0");
   };
 
   return (

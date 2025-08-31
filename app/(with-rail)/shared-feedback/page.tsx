@@ -6,6 +6,25 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Check, Mic, Volume2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { evaluateAnalogy, evaluateExplanation, AnalogyResponse, ExplanationResponse, askFeedbackQuestion } from "@/lib/api";
+import { useSpeechInput } from "@/lib/use-speech-input";
+
+function withFileId(headers: HeadersInit = {}): HeadersInit {
+  if (typeof window === "undefined") return headers;
+  const fileId = sessionStorage.getItem("uploadedFileId");
+  const attached = sessionStorage.getItem("uploadedFileAttached") === "1";
+  return fileId && attached ? { ...headers, "x-file-id": fileId } : headers;
+}
+
+async function postWithHeaders<T>(path: string, body: unknown) {
+  const res = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(withFileId() as any) },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return (await res.json()) as T;
+}
 
 type Message = { role: "user" | "assistant"; content: string };
 type FeedbackType = "explanation" | "analogy";
@@ -95,6 +114,62 @@ export default function SharedFeedbackPage() {
   const [retryText, setRetryText] = useState("");
   const [loadingRetry, setLoadingRetry] = useState(false);
   const [thread, setThread] = useState<Message[]>([]);
+  const [evalNonce, setEvalNonce] = useState(0);
+
+  // Voice input for question and retry
+  const qSpeech = useSpeechInput({ interim: true, onResult: (t) => setQuestion((prev) => (prev + t).replace(/\s+/g, " ")) });
+  const rSpeech = useSpeechInput({ interim: true, onResult: (t) => setRetryText((prev) => (prev + t).replace(/\s+/g, " ")) });
+  const toggleQMic = () => {
+    if (!qSpeech.supported) { alert("Voice input not supported in this browser."); return; }
+    (qSpeech.listening ? qSpeech.stop() : qSpeech.start());
+  };
+  const toggleRMic = () => {
+    if (!rSpeech.supported) { alert("Voice input not supported in this browser."); return; }
+    (rSpeech.listening ? rSpeech.stop() : rSpeech.start());
+  };
+
+  // Simple TTS for feedback listening
+  const [speaking, setSpeaking] = useState(false);
+  const utterRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const speak = (text: string) => {
+    try {
+      if (typeof window === "undefined") return;
+      const engine = window.speechSynthesis;
+      // Use engine state to avoid React state staleness
+      if (engine.speaking || engine.pending) {
+        engine.cancel();
+        setSpeaking(false);
+        return;
+      }
+      const u = new SpeechSynthesisUtterance(text);
+      utterRef.current = u;
+      u.rate = 1;
+      u.onend = () => {
+        setSpeaking(false);
+        if (utterRef.current === u) utterRef.current = null;
+      };
+      setSpeaking(true);
+      engine.cancel();
+      engine.speak(u);
+    } catch {}
+  };
+
+  const restartSpeak = (text: string) => {
+    try {
+      if (typeof window === "undefined") return;
+      const engine = window.speechSynthesis;
+      engine.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      utterRef.current = u;
+      u.rate = 1;
+      u.onend = () => {
+        setSpeaking(false);
+        if (utterRef.current === u) utterRef.current = null;
+      };
+      setSpeaking(true);
+      engine.speak(u);
+    } catch {}
+  };
 
   // --- Backend evaluation state ---
   const [evalLoading, setEvalLoading] = useState(false);
@@ -121,16 +196,17 @@ export default function SharedFeedbackPage() {
       setEvalError(null);
       setEvalWarning(undefined);
       try {
-        const contextName = typeof window !== "undefined" ? sessionStorage.getItem("uploadedFileName") || undefined : undefined;
-        const contextData = typeof window !== "undefined" ? sessionStorage.getItem("uploadedFileContent") || undefined : undefined;
+        const attached = typeof window !== "undefined" && sessionStorage.getItem("uploadedFileAttached") === "1";
+        const contextName = !attached && typeof window !== "undefined" ? sessionStorage.getItem("uploadedFileName") || undefined : undefined;
+        const contextData = !attached && typeof window !== "undefined" ? sessionStorage.getItem("uploadedFileContent") || undefined : undefined;
         if (type === "analogy") {
-          const res = await evaluateAnalogy(topicName, content, contextName, contextData);
+          const res = await postWithHeaders<AnalogyResponse>("/api/analogies", { topic: topicName, content, contextName, contextData });
           if (isCancelled) return;
           setAnalogyEval(res.data.evaluation);
           setExplanationEval(null);
           if (res.warning) setEvalWarning(res.warning);
         } else {
-          const res = await evaluateExplanation(topicName, content, contextName, contextData);
+          const res = await postWithHeaders<ExplanationResponse>("/api/explanations", { topic: topicName, content, contextName, contextData });
           if (isCancelled) return;
           setExplanationEval(res.data.evaluation);
           setAnalogyEval(null);
@@ -147,7 +223,7 @@ export default function SharedFeedbackPage() {
     return () => {
       isCancelled = true;
     };
-  }, [type, topicName, content]);
+  }, [type, topicName, content, evalNonce]);
 
   const submitQuestion = async () => {
     const q = question.trim();
@@ -155,10 +231,16 @@ export default function SharedFeedbackPage() {
     setThread((t) => [...t, { role: "user", content: q }]);
     setQuestion("");
     try {
-      const contextName = typeof window !== "undefined" ? sessionStorage.getItem("uploadedFileName") || undefined : undefined;
-      const contextData = typeof window !== "undefined" ? sessionStorage.getItem("uploadedFileContent") || undefined : undefined;
-      const res = await askFeedbackQuestion(topicName, content, q, type, contextName, contextData);
-      const reply = res?.data?.reply || dynamicMockAnswer(q, content, topicName);
+      const attached = typeof window !== "undefined" && sessionStorage.getItem("uploadedFileAttached") === "1";
+      const contextName = !attached && typeof window !== "undefined" ? sessionStorage.getItem("uploadedFileName") || undefined : undefined;
+      const contextData = !attached && typeof window !== "undefined" ? sessionStorage.getItem("uploadedFileContent") || undefined : undefined;
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(withFileId() as any) },
+        body: JSON.stringify({ topic: topicName, content, question: q, type, contextName, contextData }),
+      });
+      const json = await res.json();
+      const reply = json?.data?.reply || dynamicMockAnswer(q, content, topicName);
       setThread((t) => [...t, { role: "assistant", content: reply }]);
     } catch {
       const reply = dynamicMockAnswer(q, content, topicName);
@@ -211,7 +293,8 @@ export default function SharedFeedbackPage() {
     const encoded = encodeURIComponent(content);
     const topicQ = `topic=${encodeURIComponent(topicName)}`;
     if (type === "explanation") {
-      router.push(`/create-analogy?seed=${encoded}&${topicQ}`);
+      // Start Create Analogy with an empty field (no seed)
+      router.push(`/create-analogy?${topicQ}`);
     } else {
       try {
         sessionStorage.setItem("analogyText", content); // fallback for summary page
@@ -342,10 +425,13 @@ export default function SharedFeedbackPage() {
                     <h3 className="text-[16px] font-semibold text-black">Simplify Wording</h3>
                   </div>
                   <div className="flex items-center gap-2">
-                    <IconSquare aria-label="Listen to feedback">
+                    <IconSquare aria-label={speaking ? "Stop audio" : "Listen to feedback"} onClick={() => speak(["Simplify Wording:", ...feedback.wording].join(". "))}>
                       <Volume2 className="h-4 w-4 text-gray-600" />
                     </IconSquare>
-                    <IconSquare aria-label="Regenerate suggestions">
+                    <IconSquare
+                      aria-label="Restart audio"
+                      onClick={() => restartSpeak(["Simplify Wording:", ...feedback.wording].join(". "))}
+                    >
                       <RotateCcw className="h-4 w-4 text-gray-600" />
                     </IconSquare>
                   </div>
@@ -441,7 +527,7 @@ export default function SharedFeedbackPage() {
                       style={{ minHeight: "40px" }}
                     />
                     <div className="absolute bottom-2 right-2 flex gap-2">
-                      <button className="p-1 text-gray-500 hover:text-gray-700" aria-label="Voice input">
+                      <button className="p-1 text-gray-500 hover:text-gray-700" aria-label={qSpeech.listening ? "Stop voice input" : "Start voice input"} onClick={toggleQMic}>
                         <Mic className="w-4 h-4" />
                       </button>
                       <IconSquare
@@ -467,7 +553,7 @@ export default function SharedFeedbackPage() {
                       style={{ minHeight: "40px" }}
                     />
                     <div className="absolute bottom-2 right-2 flex gap-2">
-                      <button className="p-1 text-gray-500 hover:text-gray-700" aria-label="Voice input">
+                      <button className="p-1 text-gray-500 hover:text-gray-700" aria-label={rSpeech.listening ? "Stop voice input" : "Start voice input"} onClick={toggleRMic}>
                         <Mic className="w-4 h-4" />
                       </button>
                       <IconSquare

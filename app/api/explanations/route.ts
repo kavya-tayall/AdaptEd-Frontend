@@ -12,8 +12,27 @@ type ExplanationEval = {
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-async function evaluateExplanation(topic: string, content: string): Promise<ExplanationEval> {
+async function evaluateExplanation(topic: string, content: string, fileId?: string): Promise<ExplanationEval> {
 	const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+	if (fileId) {
+		// Use Responses API with input_file when fileId provided
+		const resp = await openai.responses.create({
+			model: process.env.OPENAI_RESPONSES_MODEL || "gpt-4.1-mini",
+			input: [
+				{
+					role: "user",
+					content: [
+						{ type: "input_text", text: `Evaluate this explanation of "${topic}" for a 12-year-old. Provide JSON with: score (1-10), strengths, improvements, suggestions. Explanation: ${content}` },
+						{ type: "input_file", file_id: fileId },
+					],
+				},
+			],
+			max_output_tokens: 400,
+		});
+		const txt = (resp as any).output_text as string | undefined;
+		if (!txt) throw new Error("No response from OpenAI");
+		try { return JSON.parse(txt) as ExplanationEval; } catch {}
+	}
 	const response = await openai.chat.completions.create({
 		model,
 		messages: [
@@ -41,14 +60,16 @@ async function evaluateExplanation(topic: string, content: string): Promise<Expl
 export async function POST(req: NextRequest) {
 	try {
 		const { topic, content, contextName, contextData } = await req.json();
+		const fileId = req.headers.get("x-file-id") || undefined;
 		if (!topic || !content) return NextResponse.json({ success: false, error: "Missing topic or content" }, { status: 400 });
 		let evaluation: ExplanationEval | null = null;
 		let warning: string | undefined = undefined;
 		try {
-			const prefix = contextData
+			// If a file was uploaded (fileId present), don't include trimmed PDF text.
+			const prefix = !fileId && contextData
 				? `Context from ${contextName || "attachment"}:\n${contextData.slice(0, 2000)}\n\n`
 				: "";
-			evaluation = await evaluateExplanation(topic, prefix + content);
+			evaluation = await evaluateExplanation(topic, prefix + content, fileId);
 		} catch (e) {
 			warning = "OpenAI evaluation unavailable";
 		}

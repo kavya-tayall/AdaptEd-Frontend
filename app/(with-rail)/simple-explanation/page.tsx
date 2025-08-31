@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Mic, ChevronDown, Check } from "lucide-react";
+import { useSpeechInput } from "@/lib/use-speech-input";
 
 const STACK_W = "w-[578px]";
 const SOFT_PURPLE = "color-mix(in srgb, var(--step-accent) 12%, white)";
@@ -25,6 +26,14 @@ export default function SimpleExplanationPage() {
     }
   }, [topicFromUrl]);
 
+  // Clear any analogy text carry-over when entering Simple Explanation
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem("analogyText");
+      sessionStorage.removeItem("analogy");
+    } catch {}
+  }, []);
+
   // Build sentence starters dynamically from topic
   const starterChoices = useMemo(
     () => [
@@ -38,8 +47,9 @@ export default function SimpleExplanationPage() {
   const [starter, setStarter] = useState("");
   const [text, setText] = useState("");
 
-  const [recording, setRecording] = useState(false);
-  const toggleMic = () => setRecording((r) => !r);
+  const speech = useSpeechInput({ interim: true, onResult: (t) => setText((prev) => (prev + t).replace(/\s+/g, " ")) });
+  const recording = speech.listening;
+  const toggleMic = () => (speech.listening ? speech.stop() : speech.start());
 
   const [cardOpen, setCardOpen] = useState(false);
   const selectWrapRef = useRef<HTMLDivElement | null>(null);

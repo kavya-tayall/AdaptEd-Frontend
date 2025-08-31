@@ -13,8 +13,26 @@ type AnalogyEval = {
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-async function evaluateAnalogy(topic: string, content: string): Promise<AnalogyEval> {
+async function evaluateAnalogy(topic: string, content: string, fileId?: string): Promise<AnalogyEval> {
 	const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+	if (fileId) {
+		const resp = await openai.responses.create({
+			model: process.env.OPENAI_RESPONSES_MODEL || "gpt-4.1-mini",
+			input: [
+				{
+					role: "user",
+					content: [
+						{ type: "input_text", text: `Evaluate this analogy for "${topic}". Provide JSON with: accuracy, clarity, overall (1-10 each), strengths, improvements. Analogy: ${content}` },
+						{ type: "input_file", file_id: fileId },
+					],
+				},
+			],
+			max_output_tokens: 400,
+		});
+		const txt = (resp as any).output_text as string | undefined;
+		if (!txt) throw new Error("No response from OpenAI");
+		try { return JSON.parse(txt) as AnalogyEval; } catch {}
+	}
 	const response = await openai.chat.completions.create({
 		model,
 		messages: [
@@ -37,14 +55,16 @@ async function evaluateAnalogy(topic: string, content: string): Promise<AnalogyE
 export async function POST(req: NextRequest) {
 	try {
 		const { topic, content, contextName, contextData } = await req.json();
+		const fileId = req.headers.get("x-file-id") || undefined;
 		if (!topic || !content) return NextResponse.json({ success: false, error: "Missing topic or content" }, { status: 400 });
 		let evaluation: AnalogyEval | null = null;
 		let warning: string | undefined = undefined;
 		try {
-			const prefix = contextData
+			// If a file was uploaded (fileId present), don't include trimmed PDF text.
+			const prefix = !fileId && contextData
 				? `Context from ${contextName || "attachment"}:\n${contextData.slice(0, 2000)}\n\n`
 				: "";
-			evaluation = await evaluateAnalogy(topic, prefix + content);
+			evaluation = await evaluateAnalogy(topic, prefix + content, fileId);
 		} catch (e) {
 			warning = "OpenAI evaluation unavailable";
 		}

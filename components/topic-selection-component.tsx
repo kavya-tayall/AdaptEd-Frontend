@@ -4,6 +4,7 @@ import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mic, Square } from "lucide-react";
+import { useSpeechInput } from "@/lib/use-speech-input";
 
 const STACK_W = "w-[578px]";
 
@@ -28,8 +29,9 @@ export default function TopicSelection() {
   const selectedTopic = useMemo(() => (query.trim() ? query.trim() : null), [query]);
 
   // mic UI state
-  const [recording, setRecording] = useState(false);
-  const toggleMic = () => setRecording((r) => !r);
+  const speech = useSpeechInput({ interim: true, onResult: (t) => setQuery((prev) => (prev + t).replace(/\s+/g, " ")) });
+  const recording = speech.listening;
+  const toggleMic = () => (speech.listening ? speech.stop() : speech.start());
 
   // auto-grow <textarea>
   const taRef = useRef<HTMLTextAreaElement | null>(null);

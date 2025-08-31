@@ -16,6 +16,26 @@ export async function POST(req: NextRequest) {
       type === "analogy"
         ? "You are a helpful tutor. Answer questions to improve a student's analogy. Keep answers concise and actionable."
         : "You are a helpful tutor. Answer questions to improve a student's explanation. Keep answers concise and actionable.";
+    const fileId = req.headers.get("x-file-id") || undefined;
+    if (fileId) {
+      const resp = await openai.responses.create({
+        model: process.env.OPENAI_RESPONSES_MODEL || "gpt-4.1-mini",
+        input: [
+          {
+            role: "user",
+            content: [
+              // When a file is present, do not inject trimmed PDF text; only prompt + file.
+              { type: "input_text", text: `Topic: ${topic}\nStudent draft: ${content}\nQuestion: ${question}\n\nAnswer with 3-5 bullet points and use **bold** for key terms.` },
+              { type: "input_file", file_id: fileId },
+            ],
+          },
+        ],
+        max_output_tokens: 300,
+        temperature: 0.7,
+      });
+      const reply = (resp as any).output_text?.trim() || "I couldn't generate a response right now.";
+      return NextResponse.json({ success: true, data: { reply } }, { status: 200 });
+    }
     const resp = await openai.chat.completions.create({
       model,
       messages: [

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Mic, ChevronDown, Check } from "lucide-react";
+import { useSpeechInput } from "@/lib/use-speech-input";
 
 const STACK_W = "w-[578px]";
 const SOFT_PURPLE = "color-mix(in srgb, var(--step-accent) 12%, white)";
@@ -37,7 +38,8 @@ export default function CreateAnalogyPage() {
 
   const [text, setText] = useState("");
   const taRef = useRef<HTMLTextAreaElement | null>(null);
-  const [recording, setRecording] = useState(false);
+  const speech = useSpeechInput({ interim: true, onResult: (t) => setText((prev) => (prev ? prev + " " : "") + t) });
+  const recording = speech.listening;
   const canEvaluate = text.trim().length > 0;
 
   // Close dropdown on outside click
@@ -49,18 +51,27 @@ export default function CreateAnalogyPage() {
     return () => document.removeEventListener("mousedown", onDocDown);
   }, []);
 
-  // Prefill from ?seed=... (when coming from Override)
+  // If explicit seed is present, use it; otherwise start empty
   useEffect(() => {
     const seed = search.get("seed");
-    if (seed && !text) setText(seed);
-  }, [search, text]);
+    if (seed) setText(seed);
+  }, [search]);
 
   // Restore text from sessionStorage (fallback)
   useEffect(() => {
-    if (text) return; // prefer current/seed
-    const saved = sessionStorage.getItem("analogyText");
-    if (saved) setText(saved);
-  }, [text]);
+    // Always start blank unless a seed is explicitly provided
+    if (search.get("seed")) return;
+    setText("");
+    try { sessionStorage.removeItem("analogyText"); } catch {}
+  }, [search]);
+
+  // Clear simple explanation carry-over when entering Create Analogy (unless explicitly passed via seed)
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem("simpleExp");
+      sessionStorage.removeItem("explanation");
+    } catch {}
+  }, []);
 
   // Auto-size textarea
   useEffect(() => {
@@ -194,7 +205,7 @@ export default function CreateAnalogyPage() {
           <button
             type="button"
             aria-label={recording ? "Stop voice input" : "Start voice input"}
-            onClick={() => setRecording((r) => !r)}
+            onClick={() => (speech.listening ? speech.stop() : speech.start())}
             className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-[10px] border border-[var(--step-border)] bg-white inline-flex items-center justify-center transition-colors"
             title={recording ? "Stop voice input" : "Start voice input"}
             onMouseEnter={(e) => (e.currentTarget.style.background = SOFT_PURPLE)}
