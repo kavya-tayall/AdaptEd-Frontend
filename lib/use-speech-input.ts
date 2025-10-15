@@ -17,8 +17,8 @@ export function useSpeechInput(opts: Opts = {}) {
   const recRef = useRef<any>(null);
   const askedRef = useRef<boolean>(false);
   const emittedRef = useRef<string>("");
-  const onResultRef = useRef<typeof onResult>();
-  const onErrorRef = useRef<typeof onError>();
+  const onResultRef = useRef<typeof onResult | null>(null);
+  const onErrorRef  = useRef<typeof onError  | null>(null);
 
   useEffect(() => { onResultRef.current = onResult; }, [onResult]);
   useEffect(() => { onErrorRef.current = onError; }, [onError]);
