@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
 				: "";
 			evaluation = await evaluateExplanation(topic, prefix + content, fileId);
 		} catch (e) {
+			console.error("OpenAI explanation error:", e);
 			warning = "OpenAI evaluation unavailable";
 		}
 		const data = { id: Date.now().toString(), topic, content, createdAt: new Date().toISOString(), evaluation };
