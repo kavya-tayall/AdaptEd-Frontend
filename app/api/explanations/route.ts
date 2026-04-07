@@ -22,12 +22,13 @@ async function evaluateExplanation(topic: string, content: string, fileId?: stri
 				{
 					role: "user",
 					content: [
-						{ type: "input_text", text: `Evaluate this explanation of "${topic}" for a 12-year-old. Provide JSON with: score (1-10), strengths, improvements, suggestions. Explanation: ${content}` },
+						{ type: "input_text", text: `Evaluate this explanation of "${topic}" for a 12-year-old.\nRules: be encouraging and avoid nitpicking. Only list improvements if they materially improve correctness, clarity, or age-appropriateness. If no material improvements are needed, set improvements and suggestions to "".\nProvide JSON with: score (1-10), strengths, improvements, suggestions. Reward clear and complete explanations with higher scores (8-10).\nExplanation: ${content}` },
 						{ type: "input_file", file_id: fileId },
 					],
 				},
 			],
 			max_output_tokens: 400,
+			temperature: 0.4,
 		});
 		const txt = (resp as any).output_text as string | undefined;
 		if (!txt) throw new Error("No response from OpenAI");
@@ -36,12 +37,20 @@ async function evaluateExplanation(topic: string, content: string, fileId?: stri
 	const response = await openai.chat.completions.create({
 		model,
 		messages: [
-			{ role: "system", content: "You are an educational expert. Evaluate explanations for 12-year-olds. Be encouraging but constructive. Respond in JSON format." },
-			{ role: "user", content: `Evaluate this explanation of "${topic}" for a 12-year-old: "${content}".\n\nProvide JSON with: score (1-10), strengths (string), improvements (string), suggestions (string)` },
+			{
+				role: "system",
+				content:
+					"You are an educational expert. Evaluate explanations for 12-year-olds. Be encouraging and avoid nitpicking. Only list improvements if they materially improve correctness, clarity, or age-appropriateness. If no material improvements are needed, set improvements and suggestions to an empty string. Respond in JSON format.",
+			},
+			{
+				role: "user",
+				content:
+					`Evaluate this explanation of "${topic}" for a 12-year-old.\nReward clear and complete explanations with higher scores (8-10).\nProvide JSON with: score (1-10), strengths (string), improvements (string), suggestions (string). If no material improvements are needed, set improvements and suggestions to "".\n\nExplanation: ${content}`,
+			},
 		],
 		response_format: { type: "json_object" },
 		max_tokens: 400,
-		temperature: 0.7,
+		temperature: 0.4,
 	});
 	const txt = response.choices[0]?.message?.content;
 	if (!txt) throw new Error("No response from OpenAI");

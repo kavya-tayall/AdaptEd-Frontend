@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, Mic, Volume2, RotateCcw } from "lucide-react";
+import { Mic, Volume2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { evaluateAnalogy, evaluateExplanation, AnalogyResponse, ExplanationResponse, askFeedbackQuestion } from "@/lib/api";
 import { useSpeechInput } from "@/lib/use-speech-input";
@@ -530,15 +530,20 @@ export default function SharedFeedbackPage() {
                       <button className="p-1 text-gray-500 hover:text-gray-700" aria-label={qSpeech.listening ? "Stop voice input" : "Start voice input"} onClick={toggleQMic}>
                         <Mic className="w-4 h-4" />
                       </button>
-                      <IconSquare
+                      <button
+                        type="button"
                         aria-label="Submit question"
                         onClick={onSubmit}
                         disabled={!canSubmit}
-                        className={`${canSubmit ? "border-purple-500" : ""} disabled:opacity-50`}
+                        className={`h-7 px-3 text-xs font-medium rounded-md border ${
+                          canSubmit
+                            ? "bg-purple-600 text-white border-purple-600 hover:bg-purple-700"
+                            : "bg-gray-100 text-gray-400 border-gray-200"
+                        }`}
                         title="Submit (⌘/Ctrl + Enter)"
                       >
-                        <Check className="h-4 w-4 text-purple-600" />
-                      </IconSquare>
+                        Submit
+                      </button>
                     </div>
                   </div>
                 ) : (
@@ -556,15 +561,20 @@ export default function SharedFeedbackPage() {
                       <button className="p-1 text-gray-500 hover:text-gray-700" aria-label={rSpeech.listening ? "Stop voice input" : "Start voice input"} onClick={toggleRMic}>
                         <Mic className="w-4 h-4" />
                       </button>
-                      <IconSquare
+                      <button
+                        type="button"
                         aria-label="Submit retry"
                         onClick={onSubmit}
                         disabled={!canSubmit || loadingRetry}
-                        className={`${canSubmit && !loadingRetry ? "border-purple-500" : ""} disabled:opacity-50`}
+                        className={`h-7 px-3 text-xs font-medium rounded-md border ${
+                          canSubmit && !loadingRetry
+                            ? "bg-purple-600 text-white border-purple-600 hover:bg-purple-700"
+                            : "bg-gray-100 text-gray-400 border-gray-200"
+                        }`}
                         title="Submit (⌘/Ctrl + Enter)"
                       >
-                        <Check className="h-4 w-4 text-purple-600" />
-                      </IconSquare>
+                        Submit
+                      </button>
                     </div>
                   </div>
                 )}
@@ -634,21 +644,24 @@ function UserBubble({ text }: { text: string }) {
 /* ---------- Mock logic ---------- */
 function generateFeedback(text: string) {
   const lower = text.toLowerCase();
-  const wording: string[] = [];
-  const logic: string[] = [];
+  const wordingIssues: string[] = [];
+  const logicIssues: string[] = [];
 
   if (!/simple|like|push|means|rule/.test(lower))
-    wording.push(
+    wordingIssues.push(
       '"Shows how voltage, current, and resistance are connected" - vague and abstract; doesn\'t explain how they relate.'
     );
   if (!/voltage/.test(lower))
-    wording.push('"With a formula using V, I, and R" - unclear without definitions.');
+    wordingIssues.push('"With a formula using V, I, and R" - unclear without definitions.');
   if (!/\bv\s*=\s*i\s*[*·]?\s*r\b/.test(lower))
-    logic.push("Doesn't state what the formula actually is (Ohm's Law: V = I·R).");
+    logicIssues.push("Doesn't state what the formula actually is (Ohm's Law: V = I·R).");
   if (!/what voltage|what current|what resistance/.test(lower))
-    logic.push("Doesn't explain what voltage, current, or resistance mean in basic terms.");
+    logicIssues.push("Doesn't explain what voltage, current, or resistance mean in basic terms.");
   if (!/why|when|how/.test(lower))
-    logic.push("No explanation of why or when you would use this rule.");
+    logicIssues.push("No explanation of why or when you would use this rule.");
+
+  const wording = wordingIssues.length >= 2 ? wordingIssues.slice(0, 2) : [];
+  const logic = logicIssues.length >= 2 ? logicIssues.slice(0, 2) : [];
 
   return { wording, logic };
 }

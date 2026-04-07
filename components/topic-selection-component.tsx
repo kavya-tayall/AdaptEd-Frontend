@@ -83,6 +83,17 @@ export default function TopicSelection() {
         >
           What specific concept within Electrical Engineering do you want to master?
         </p>
+        <div className={`${STACK_W} mb-6 rounded-[12px] border border-[var(--step-border)] bg-white p-4`}>
+          <h2 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--step-darkgrey)]">
+            Quick start
+          </h2>
+          <ol className="mt-2 list-decimal list-inside text-[13px]/[20px] text-gray-600 space-y-1">
+            <li>Pick a topic or type your own.</li>
+            <li>Write a simple explanation in your own words.</li>
+            <li>Review the feedback and improve your answer.</li>
+            <li>Create an analogy, then export your summary.</li>
+          </ol>
+        </div>
 
         {/* MULTI-LINE FIELD */}
         <div className={`relative ${STACK_W} mb-6`} role="group" aria-labelledby="topic-label">

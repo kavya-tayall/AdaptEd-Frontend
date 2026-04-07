@@ -54,9 +54,15 @@ export default function Sidebar() {
       >
         {/* Header Section */}
         <header className="px-8 pt-8 pb-4 border-b border-gray-200">
-          <h1 className="text-[24px]/[28px] font-bold tracking-[-0.01em] text-black">
-            AdaptEd
-          </h1>
+          <div className="flex items-start justify-between gap-4">
+            <h1 className="text-[24px]/[28px] font-bold tracking-[-0.01em] text-black">
+              AdaptEd
+            </h1>
+            <div className="flex items-center gap-3">
+              <img src="/arc-lab.png" alt="ARC Lab logo" className="h-6 w-auto" />
+              <img src="/uw-logo.png" alt="UW logo" className="h-6 w-auto" />
+            </div>
+          </div>
         </header>
 
         {/* Progress Section with -1px margin for gap */}

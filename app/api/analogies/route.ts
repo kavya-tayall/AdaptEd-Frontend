@@ -22,12 +22,13 @@ async function evaluateAnalogy(topic: string, content: string, fileId?: string):
 				{
 					role: "user",
 					content: [
-						{ type: "input_text", text: `Evaluate this analogy for "${topic}". Provide JSON with: accuracy, clarity, overall (1-10 each), strengths, improvements. Analogy: ${content}` },
+						{ type: "input_text", text: `Evaluate this analogy for "${topic}".\nRules: be encouraging and avoid nitpicking. Only list improvements if they materially improve accuracy or clarity. If no material improvements are needed, set improvements to "".\nProvide JSON with: accuracy, clarity, overall (1-10 each), strengths, improvements. Reward clear and accurate analogies with higher scores (8-10).\nAnalogy: ${content}` },
 						{ type: "input_file", file_id: fileId },
 					],
 				},
 			],
 			max_output_tokens: 400,
+			temperature: 0.4,
 		});
 		const txt = (resp as any).output_text as string | undefined;
 		if (!txt) throw new Error("No response from OpenAI");
@@ -36,12 +37,20 @@ async function evaluateAnalogy(topic: string, content: string, fileId?: string):
 	const response = await openai.chat.completions.create({
 		model,
 		messages: [
-			{ role: "system", content: "You are an educational expert. Evaluate learning analogies. Focus on accuracy and clarity. Respond in JSON format." },
-			{ role: "user", content: `Evaluate this analogy for "${topic}": "${content}".\n\nProvide JSON with: accuracy (1-10), clarity (1-10), overall (1-10), strengths (string), improvements (string)` },
+			{
+				role: "system",
+				content:
+					"You are an educational expert. Evaluate learning analogies. Focus on accuracy and clarity. Be encouraging and avoid nitpicking. Only list improvements if they materially improve accuracy or clarity. If no material improvements are needed, set improvements to an empty string. Respond in JSON format.",
+			},
+			{
+				role: "user",
+				content:
+					`Evaluate this analogy for "${topic}".\nReward clear and accurate analogies with higher scores (8-10).\nProvide JSON with: accuracy (1-10), clarity (1-10), overall (1-10), strengths (string), improvements (string). If no material improvements are needed, set improvements to "".\n\nAnalogy: ${content}`,
+			},
 		],
 		response_format: { type: "json_object" },
 		max_tokens: 400,
-		temperature: 0.7,
+		temperature: 0.4,
 	});
 	const txt = response.choices[0]?.message?.content;
 	if (!txt) throw new Error("No response from OpenAI");
